@@ -10,26 +10,24 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    [SerializeField] private MouseCameraController _cameraController;
-    [SerializeField] private Slider _transparent_slider;
-    private Renderer _targetRenderer;
-    [SerializeField] private FlexibleColorPicker fcp;
-
-    private List<GameObject> _UI_GO_List = new List<GameObject>();
-
     public static UIManager Instantiate;
 
-    private Coroutine colorChangeCoroutine;
-    public Button Button;
-    public Button SaveButton;
-    public Button LoadButton;
 
-
+    [SerializeField] private MouseCameraController _cameraController;
+    [SerializeField] private Slider _transparent_slider;
+    [SerializeField] private FlexibleColorPicker fcp;
+    [SerializeField] private Toggle toggleButton;
+    [SerializeField] private Button _VisibleButton;
+    [SerializeField] private Button _SaveButton;
+    [SerializeField] private Button _LoadButton;
     [SerializeField] private Sprite spriteOn;
     [SerializeField] private Sprite spriteOff;
-    private bool isMeshEnabled = true;
 
-    public Toggle toggleButton;
+
+    private bool isMeshEnabled = true;
+    private Coroutine colorChangeCoroutine;
+    private List<GameObject> _UI_GO_List = new List<GameObject>();
+    private Renderer _targetRenderer;
 
 
     private void Start()
@@ -51,18 +49,15 @@ public class UIManager : MonoBehaviour
 
         _transparent_slider.onValueChanged.AddListener(OnSliderValueChanged);
 
-        Button.image.sprite = isMeshEnabled ? spriteOn : spriteOff;
-        Button.onClick.AddListener(OnButtonClicked);
-        SaveButton.onClick.AddListener(SaveScene);
-        LoadButton.onClick.AddListener(LoadScene);
+        _VisibleButton.image.sprite = isMeshEnabled ? spriteOn : spriteOff;
+        _VisibleButton.onClick.AddListener(OnButtonClicked);
+        _SaveButton.onClick.AddListener(SaveScene);
+        _LoadButton.onClick.AddListener(LoadScene);
 
-        // Добавляем слушатель события изменения значения Toggle
         toggleButton.onValueChanged.AddListener(OnToggleValueChanged);
-
-
     }
 
-    void Update()
+    private void Update()
     {
         if (_cameraController.focusedObject != _targetRenderer?.gameObject)
         {
@@ -95,12 +90,10 @@ public class UIManager : MonoBehaviour
     {
         if (_targetRenderer != null)
         {
-
             print("TransparentChange");
             Color newColor = _targetRenderer.material.color;
             newColor.a = newValue;
             _targetRenderer.material.color = newColor;
-
         }
     }
 
@@ -112,10 +105,9 @@ public class UIManager : MonoBehaviour
             Renderer mesh = _UI_GO_List[i].GetComponent<ObjectListController>().targetObject.GetComponent<Renderer>();
             mesh.enabled = isMeshEnabled;
             _UI_GO_List[i].GetComponent<ObjectListController>().OuterButtonPress(isMeshEnabled);
-
         }
 
-        Button.image.sprite = isMeshEnabled ? spriteOn : spriteOff;
+        _VisibleButton.image.sprite = isMeshEnabled ? spriteOn : spriteOff;
     }
 
     private void OnToggleValueChanged(bool isOn)
@@ -124,8 +116,6 @@ public class UIManager : MonoBehaviour
         {
             _UI_GO_List[i].GetComponent<ObjectListController>().targetObject.SetActive(isOn);
             _UI_GO_List[i].GetComponent<ObjectListController>().OuterTogglePress(isOn);
-
-
         }
     }
 
@@ -164,36 +154,52 @@ public class UIManager : MonoBehaviour
                 newColor.g = fcp.color.g;
                 newColor.b = fcp.color.b;
                 _targetRenderer.material.color = newColor;
-
             }
 
             yield return new WaitForFixedUpdate();
         }
     }
 
-    //-------------------------------------SceneSave--------------------------------------------------------------------
-public void SaveScene()
-{
-    SceneData sceneData = new SceneData();
-    GameObject[] allInteractiveObjects = GameObject.FindGameObjectsWithTag("InteractiveObject");
-    sceneData.objectsData = new ObjectData[allInteractiveObjects.Length];
-    int validObjectCount = 0;
-
-    for (int i = 0; i < allInteractiveObjects.Length; i++)
+    //----------------------------------------------------------SceneSave--------------------------------------------------------------------------------------
+    private void SaveScene()
     {
-        GameObject go = allInteractiveObjects[i];
-        ObjectInteraction interaction = go.GetComponent<ObjectInteraction>();
-        MeshFilter meshFilter = go.GetComponent<MeshFilter>();
+        SceneData sceneData = new SceneData();
+        GameObject[] allInteractiveObjects = GameObject.FindGameObjectsWithTag("InteractiveObject");
+        sceneData.objectsData = new ObjectData[allInteractiveObjects.Length];
+        int validObjectCount = 0;
 
-        // Проверяем активность GameObject и MeshRenderer
-        bool isActive = go.activeSelf;
-        bool isMeshEnabled = meshFilter != null && meshFilter.sharedMesh != null && go.GetComponent<MeshRenderer>().enabled;
-
-        if (interaction != null && isActive && isMeshEnabled) // Сохраняем только активные объекты с включенным мешем
+        for (int i = 0; i < allInteractiveObjects.Length; i++)
         {
-            // Определяем тип примитива
+            GameObject go = allInteractiveObjects[i];
+            ObjectInteraction interaction = go.GetComponent<ObjectInteraction>();
+            MeshFilter meshFilter = go.GetComponent<MeshFilter>();
+            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
+
+            // Проверяем наличие необходимых компонентов
+            if (interaction == null)
+            {
+                Debug.LogWarning("ObjectInteraction component not found on object: " + go.name);
+                continue;
+            }
+
+            if (meshFilter == null)
+            {
+                Debug.LogWarning("MeshFilter component not found on object: " + go.name);
+                continue;
+            }
+
+            if (meshRenderer == null)
+            {
+                Debug.LogWarning("MeshRenderer component not found on object: " + go.name);
+                continue;
+            }
+
+            bool isActive = go.activeSelf;
+            bool isMeshEnabled = meshRenderer.enabled;
+
+            // Тип примитива
             PrimitiveType primitiveType = PrimitiveType.Cube;
-            if (meshFilter != null && meshFilter.sharedMesh != null)
+            if (meshFilter.sharedMesh != null)
             {
                 Mesh currentMesh = meshFilter.sharedMesh;
                 switch (currentMesh.name)
@@ -219,124 +225,114 @@ public void SaveScene()
                 }
             }
 
-            // Выводим в консоль информацию о сохраняемом объекте и его типе
-            Debug.Log("Saving object: " + go.name + ", type: " + primitiveType + ", isActive: " + isActive + ", isMeshEnabled: " + isMeshEnabled);
-
-            sceneData.objectsData[validObjectCount] = new ObjectData
+            Debug.Log("Saving object: " + go.name + ", type: " + primitiveType + ", isActive: " + isActive +
+                      ", isMeshEnabled: " + isMeshEnabled);
+            
+                var material = interaction.ObjectRenderer.material;
+                var position = go.transform.position;
+                sceneData.objectsData[validObjectCount] = new ObjectData
             {
                 name = go.name,
-                colorR = interaction.objectRenderer.material.color.r,
-                colorG = interaction.objectRenderer.material.color.g,
-                colorB = interaction.objectRenderer.material.color.b,
-                colorA = interaction.objectRenderer.material.color.a,
-                posX = go.transform.position.x,
-                posY = go.transform.position.y,
-                posZ = go.transform.position.z,
+                colorR = material.color.r,
+                colorG = material.color.g,
+                colorB = material.color.b,
+                colorA = material.color.a,
+                posX = position.x,
+                posY = position.y,
+                posZ = position.z,
                 parentName = go.transform.parent ? go.transform.parent.name : "",
                 primitiveType = primitiveType,
-                isActive = go.activeSelf,
-                isMeshEnabled = meshFilter != null && meshFilter.sharedMesh != null && go.GetComponent<MeshRenderer>().enabled
+                isActive = isActive,
+                isMeshEnabled = isMeshEnabled
             };
 
             validObjectCount++;
         }
-    }
 
-    // Урезаем массив до фактического количества сохраненных объектов
-    Array.Resize(ref sceneData.objectsData, validObjectCount);
+        // Урезаем массив до фактического количества сохраненных объектов
+        Array.Resize(ref sceneData.objectsData, validObjectCount);
 
-    BinaryFormatter formatter = new BinaryFormatter();
-    string path = Application.persistentDataPath + "/sceneData.dat";
-    FileStream stream = new FileStream(path, FileMode.Create);
-    formatter.Serialize(stream, sceneData);
-    stream.Close();
-
-    Debug.Log("Scene saved to: " + path);
-}
-
-
-        public void LoadScene()
-{
-    string path = Application.persistentDataPath + "/sceneData.dat";
-    Debug.Log("Loading scene from: " + path);
-    if (File.Exists(path))
-    {
         BinaryFormatter formatter = new BinaryFormatter();
-        FileStream stream = new FileStream(path, FileMode.Open);
-
-        SceneData sceneData = formatter.Deserialize(stream) as SceneData;
+        string path = Application.persistentDataPath + "/sceneData.dat";
+        FileStream stream = new FileStream(path, FileMode.Create);
+        formatter.Serialize(stream, sceneData);
         stream.Close();
 
-        // Обновляем или создаем объекты
-        foreach (ObjectData objData in sceneData.objectsData)
-        {
-            Debug.Log("Loading object: " + objData.name + ", type: " + objData.primitiveType + ", isActive: " + objData.isActive + ", isMeshEnabled: " + objData.isMeshEnabled);
-
-            // Ищем объект с таким именем
-            GameObject newObject = GameObject.Find(objData.name);
-
-            // Если объект не найден, создаем новый
-            if (newObject == null)
-            {
-                newObject = GameObject.CreatePrimitive(objData.primitiveType);
-                newObject.name = objData.name;
-                newObject.tag = "InteractiveObject";
-
-                // Добавляем ObjectInteraction, если его нет
-                ObjectInteraction interaction = newObject.GetComponent<ObjectInteraction>();
-                if (interaction == null)
-                {
-                    interaction = newObject.AddComponent<ObjectInteraction>();
-                }
-
-                // Инициализируем objectRenderer
-                if (newObject.TryGetComponent<Renderer>(out Renderer renderer))
-                {
-                    interaction.objectRenderer = renderer;
-                }
-            }
-
-            // Настраиваем цвет 
-            if (newObject.TryGetComponent<Renderer>(out Renderer objectRenderer))
-            {
-                Color loadedColor = new Color(objData.colorR, objData.colorG, objData.colorB, objData.colorA);
-                objectRenderer.material.color = loadedColor;
-            }
-
-            // Установка позиции
-            newObject.transform.position = new Vector3(objData.posX, objData.posY, objData.posZ);
-
-            // Устанавливаем родителя, если он был сохранен
-            if (!string.IsNullOrEmpty(objData.parentName))
-            {
-                GameObject parentObject = GameObject.Find(objData.parentName);
-                if (parentObject != null)
-                {
-                    newObject.transform.SetParent(parentObject.transform);
-                }
-                else
-                {
-                    Debug.LogWarning("Parent object not found: " + objData.parentName);
-                }
-            }
-
-            // Устанавливаем активность GameObject
-            newObject.SetActive(objData.isActive);
-
-            // Устанавливаем активность MeshRenderer
-            if (newObject.TryGetComponent<MeshRenderer>(out MeshRenderer meshRenderer))
-            {
-                meshRenderer.enabled = objData.isMeshEnabled;
-            }
-        }
-
-        Debug.Log("Scene loaded from: " + path);
+        Debug.Log("Scene saved to: " + path);
     }
-    else
+
+
+    private void LoadScene()
     {
-        Debug.LogError("Save file not found in: " + path);
+        string path = Application.persistentDataPath + "/sceneData.dat";
+        Debug.Log("Loading scene from: " + path);
+        if (File.Exists(path))
+        {
+            BinaryFormatter formatter = new BinaryFormatter();
+            FileStream stream = new FileStream(path, FileMode.Open);
+
+            SceneData sceneData = formatter.Deserialize(stream) as SceneData;
+            stream.Close();
+
+            foreach (ObjectData objData in sceneData.objectsData)
+            {
+                Debug.Log("Loading object: " + objData.name + ", type: " + objData.primitiveType + ", isActive: " +
+                          objData.isActive + ", isMeshEnabled: " + objData.isMeshEnabled);
+
+                GameObject newObject = GameObject.Find(objData.name);
+
+                if (newObject == null)
+                {
+                    newObject = GameObject.CreatePrimitive(objData.primitiveType);
+                    newObject.name = objData.name;
+                    newObject.tag = "InteractiveObject";
+
+                    ObjectInteraction interaction = newObject.GetComponent<ObjectInteraction>();
+                    if (interaction == null)
+                    {
+                        interaction = newObject.AddComponent<ObjectInteraction>();
+                    }
+
+                    if (newObject.TryGetComponent<Renderer>(out Renderer renderer))
+                    {
+                        interaction.ObjectRenderer = renderer;
+                    }
+                }
+
+                if (newObject.TryGetComponent<Renderer>(out Renderer objectRenderer))
+                {
+                    Color loadedColor = new Color(objData.colorR, objData.colorG, objData.colorB, objData.colorA);
+                    objectRenderer.material.color = loadedColor;
+                }
+
+                newObject.transform.position = new Vector3(objData.posX, objData.posY, objData.posZ);
+
+                if (!string.IsNullOrEmpty(objData.parentName))
+                {
+                    GameObject parentObject = GameObject.Find(objData.parentName);
+                    if (parentObject != null)
+                    {
+                        newObject.transform.SetParent(parentObject.transform);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Parent object not found: " + objData.parentName);
+                    }
+                }
+
+                newObject.SetActive(objData.isActive);
+
+                if (newObject.TryGetComponent<MeshRenderer>(out MeshRenderer meshRenderer))
+                {
+                    meshRenderer.enabled = objData.isMeshEnabled;
+                }
+            }
+
+            Debug.Log("Scene loaded from: " + path);
+        }
+        else
+        {
+            Debug.LogError("Save file not found in: " + path);
+        }
     }
 }
-    }
-
-

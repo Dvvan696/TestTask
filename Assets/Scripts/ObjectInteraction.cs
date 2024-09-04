@@ -1,50 +1,43 @@
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class ObjectInteraction : MonoBehaviour
 {
-    public Renderer objectRenderer;
-    public Color defaultColor;
-    public float transparencySpeed = 5f;
+    
+    
+    private Renderer _objectRenderer;
+    private Color defaultColor;
 
 
-    void Start()
+    private void Start()
     {
-        objectRenderer = GetComponent<Renderer>();
-        
+        _objectRenderer = GetComponent<Renderer>();
+        if (!gameObject.CompareTag("InteractiveObject"))
+        {
+            Debug.LogWarning("ObjectInteraction Tag not found on object: " + this.name);
+        }
     }
 
     private void OnMouseEnter()
     {
-        defaultColor = objectRenderer.material.color;
-        
-        
+        defaultColor = _objectRenderer.material.color;
     }
 
-    void OnMouseOver()
+    private void OnMouseOver()
     {
-        
-        
-        objectRenderer.material.color = new Color(1f, 1f, 0f, 1f);;
-
+        _objectRenderer.material.color = new Color(1f, 1f, 0f, 1f);
+        ;
         if (Input.GetMouseButton(0))
         {
-            
-            MakeMaterialTransparent(objectRenderer.material);
+            MakeMaterialTransparent(_objectRenderer.material);
         }
     }
 
-    void OnMouseExit()
+    private void OnMouseExit()
     {
-        
-        objectRenderer.material.color = defaultColor;
-        
+        _objectRenderer.material.color = defaultColor;
     }
-
-
-
-
-
 
     void MakeMaterialTransparent(Material material)
     {
@@ -53,8 +46,11 @@ public class ObjectInteraction : MonoBehaviour
             Debug.LogError("Material is null!");
             return;
         }
+    }
 
-        
-        
+    public Renderer ObjectRenderer
+    {
+        get { return _objectRenderer;}
+        set { _objectRenderer = value; }
     }
 }
