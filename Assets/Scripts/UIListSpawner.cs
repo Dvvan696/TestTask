@@ -3,10 +3,10 @@ using UnityEngine.UI;
 
 public class UIListSpawner : MonoBehaviour
 {
-    public GameObject uiPrefab; // Префаб UI элемента
-    public RectTransform content; // RectTransform компонента Content у VerticalLayoutGroup
-    public ChildCounter childCounter; // Ссылка на ваш скрипт, возвращающий список GO
-    public float spacing = 60f; // Отступ между UI элементами по вертикали
+    public GameObject uiPrefab; 
+    public RectTransform content; 
+    public ChildCounter childCounter; 
+    public float spacing = 60f; 
 
     void Start()
     {
@@ -22,17 +22,19 @@ public class UIListSpawner : MonoBehaviour
 
     void SpawnUIElements()
     {
-        // Получаем количество объектов в списке
+        
         int objectCount = childCounter.childObjects.Count;
+        
         print(childCounter.childObjects.Count);
-        // Создаем UI элементы
+        
         for (int i = 0; i < objectCount; i++)
         {
             
             // Создаем новый UI элемент из префаба и указываем родителя
-            GameObject newElement = Instantiate(uiPrefab, content); 
-            
-           
+            GameObject newElement = Instantiate(uiPrefab, content);
+            newElement.GetComponent<ObjectListController>().targetObject = childCounter.childObjects[i];
+            print(newElement);
+            UIManager.Instantiate.UI_GO_List_fill(newElement);
             // Получаем RectTransform нового UI элемента
             RectTransform elementRect = newElement.GetComponent<RectTransform>();
 
@@ -41,6 +43,8 @@ public class UIListSpawner : MonoBehaviour
 
             // Устанавливаем позицию UI элемента
             elementRect.anchoredPosition = new Vector2(0f, -verticalOffset);
+            
+            
         }
     }
 }

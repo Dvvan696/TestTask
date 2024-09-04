@@ -7,7 +7,6 @@ public class ObjectInteraction : MonoBehaviour
     public Color defaultColor;
     public float transparencySpeed = 5f;
 
-    internal bool isHidden = false;
 
     void Start()
     {
@@ -19,20 +18,19 @@ public class ObjectInteraction : MonoBehaviour
     {
         defaultColor = objectRenderer.material.color;
         
+        
     }
 
     void OnMouseOver()
     {
         
         
-        objectRenderer.material.color = Color.yellow;
+        objectRenderer.material.color = new Color(1f, 1f, 0f, 1f);;
 
         if (Input.GetMouseButton(0))
         {
-            float newAlpha = objectRenderer.material.color.a - Time.deltaTime * transparencySpeed;
-            Color newColor = objectRenderer.material.color;
-            newColor.a = Mathf.Clamp(newAlpha, 0f, 1f);
-            objectRenderer.material.color = newColor;
+            
+            MakeMaterialTransparent(objectRenderer.material);
         }
     }
 
@@ -43,21 +41,20 @@ public class ObjectInteraction : MonoBehaviour
         
     }
 
-    public void ToggleVisibility()
-    {
-        isHidden = !isHidden;
-        objectRenderer.enabled = !isHidden;
-    }
 
-    public void SetColor(Color newColor)
-    {
-        objectRenderer.material.color = newColor;
-    }
 
-    public void SetTransparency(float value)
+
+
+
+    void MakeMaterialTransparent(Material material)
     {
-        Color newColor = objectRenderer.material.color;
-        newColor.a = value;
-        objectRenderer.material.color = newColor;
+        if (material == null)
+        {
+            Debug.LogError("Material is null!");
+            return;
+        }
+
+        
+        
     }
 }
