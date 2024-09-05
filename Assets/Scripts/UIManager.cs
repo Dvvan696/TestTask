@@ -30,15 +30,15 @@ public class UIManager : MonoBehaviour
     private Renderer _targetRenderer;
 
 
-    private void Start()
+    private void Awake()
     {
         if (Instantiate == null)
         {
             Instantiate = this;
         }
-        else
+        else if (Instantiate != this)
         {
-            Destroy(Instantiate);
+            Destroy(gameObject);
         }
 
         if (_transparent_slider == null)
